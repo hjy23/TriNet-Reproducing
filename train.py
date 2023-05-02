@@ -16,9 +16,6 @@ config.gpu_options.allow_growth = True
 config.gpu_options.per_process_gpu_memory_fraction = 1
 sess = tf.compat.v1.Session(config=config)
 from tensorflow import keras
-# from feature_DCGR import *
-# from feature_properties import *
-# from feature_PSSM import *
 from Model import *
 from utils import *
 import copy
@@ -505,8 +502,6 @@ def checkargs(args):
 class Config():
     def __init__(self, args):
 
-        # self.ligand = 'P' + args.ligand if args.ligand != 'HEME' else 'PHEM'
-        # self.Dataset_dir = f'./data/'
         self.type = args.type
         self.activation_type = args.activation_type
         self.batch_size = args.batch_size
