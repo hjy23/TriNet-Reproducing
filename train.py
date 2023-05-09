@@ -16,6 +16,9 @@ config.gpu_options.allow_growth = True
 config.gpu_options.per_process_gpu_memory_fraction = 1
 sess = tf.compat.v1.Session(config=config)
 from tensorflow import keras
+# from feature_DCGR import *
+# from feature_properties import *
+# from feature_PSSM import *
 from Model import *
 from utils import *
 import copy
@@ -31,13 +34,39 @@ data processing part
 """
 
 
-def load_dataset(dataset, train_fasta, test_fasta, train_pssm, test_pssm, use_pssm, feature_path=f'./feature',
-                 shuffle=True, shuffle_seed=7):
+def load_dataset(dataset, fasta_file, pssm_dir, use_pssm, feature_path=f'./feature',
+                 shuffle=True, shuffle_seed=7, mode='train'):
     feature_path = f'{feature_path}/{dataset}'
     if not os.path.exists(feature_path):
         os.makedirs(feature_path)
-    sequences_train, label_tr_eval = load_fasta(train_fasta)
-    sequences_test, test_label = load_fasta(test_fasta)
+    names, sequences, labels = load_fasta(fasta_file)
+    dcgr_feas = get_DCGR_features(sequences,
+                                  f'{feature_path}/dcgr_features_{mode}.pkl')  # 1376*158*8,through CNN
+    prpt_feas = get_properties_features(sequences, f'{feature_path}/prpt_features_{mode}.pkl',
+                                        theta=50)  # 1376*50*8, through Encoder
+    if use_pssm:
+        evolution_feas = get_PSSM_features(sequences, f'{feature_path}/pssm_features_{mode}.pkl',
+                                           pssm_dir=pssm_dir, theta=50)  # 1376*50*20, through BiLSTM
+    else:
+        evolution_feas = get_blosum_features(sequences, f'{feature_path}/blosum_features_{mode}.pkl',
+                                             f'./feature/blosum_dict.pkl', theta=50)  # 1376*50*20, through BiLSTM
+
+    # shuffle
+    if shuffle:
+        print('Shuffle the data...')
+        dcgr_feas, prpt_feas, evolution_feas, labels = shuffle_dataset(dcgr_feas, prpt_feas, evolution_feas, labels,
+                                                                       shuffle_seed)
+
+    return dcgr_feas, prpt_feas, evolution_feas, labels
+
+
+def load_dataset_raw(dataset, train_fasta, test_fasta, train_pssm, test_pssm, use_pssm, feature_path=f'./feature',
+                     shuffle=True, shuffle_seed=7):
+    feature_path = f'{feature_path}/{dataset}'
+    if not os.path.exists(feature_path):
+        os.makedirs(feature_path)
+    names_tarin, sequences_train, label_tr_eval = load_fasta(train_fasta)
+    names_test, sequences_test, test_label = load_fasta(test_fasta)
     dcgr_tr_eval = get_DCGR_features(sequences_train,
                                      f'{feature_path}/dcgr_features_train.pkl')  # 1376*158*8,through CNN
     prpt_tr_eval = get_properties_features(sequences_train, f'{feature_path}/prpt_features_train.pkl',
@@ -358,10 +387,22 @@ def train(params, seed=200, shuffle_seed=13, split_seed=7, val_ratio=0.2):
     set_seed(seed=seed)
     dataset_name = params.train_fasta.split('/')[-1].split('.')[0]
     print('Loading data...')
-    dcgr_tr_eval, prpt_tr_eval, pssm_tr_eval, label_tr_eval, test_data, test_label = load_dataset(
-        dataset=dataset_name, train_fasta=params.train_fasta, test_fasta=params.test_fasta,
-        train_pssm=params.train_pssm, test_pssm=params.test_pssm, use_pssm=params.use_PSSM, shuffle=True,
-        shuffle_seed=shuffle_seed)
+    dcgr_tr_eval, prpt_tr_eval, pssm_tr_eval, label_tr_eval = load_dataset(dataset=dataset_name,
+                                                                           fasta_file=params.train_fasta,
+                                                                           pssm_dir=params.train_pssm,
+                                                                           use_pssm=params.use_PSSM,
+                                                                           shuffle=True,
+                                                                           shuffle_seed=shuffle_seed,
+                                                                           mode='train')
+    if params.use_test:
+        dcgr_test, prpt_test, pssm_test, label_test = load_dataset(dataset=dataset_name,
+                                                                   fasta_file=params.test_fasta,
+                                                                   pssm_dir=params.test_pssm,
+                                                                   use_pssm=params.use_PSSM,
+                                                                   shuffle=True,
+                                                                   shuffle_seed=shuffle_seed,
+                                                                   mode='test')
+        test_data = [dcgr_test, pssm_test, prpt_test]
     print('Finish loading data!')
     # all_test_labels = []
 
@@ -399,9 +440,10 @@ def train(params, seed=200, shuffle_seed=13, split_seed=7, val_ratio=0.2):
     print('model is finished')
 
     # predict
-    pred_probability = model.predict(test_data)
-    # calculate metrics
-    acc, precision, sensitivity, specificity, f1_score, MCC = calculate_performace(test_label, pred_probability,
+    if params.use_test:
+        pred_probability = model.predict(test_data)
+        # calculate metrics
+        acc, precision, sensitivity, specificity, f1_score, MCC = calculate_performace(label_test, pred_probability,
                                                                                    threshold=0.5)
     # with open(f'./test_label.pkl', 'wb') as f:
     #     pickle.dump(test_label, f)
@@ -439,6 +481,8 @@ def parse_args():
                         help='The path of the train FASTA file.')
     parser.add_argument("--train_pssm", "-train_pssm", dest='train_pssm', type=str,
                         help='The path of the train PSSM files.')
+    parser.add_argument("--use_test", "-use_test", dest='use_test', type=bool,
+                        help='Whether to use an independent test set to evaluate the trained model.')
     parser.add_argument("--test_fasta", "-test_fasta", dest='test_fasta', type=str,
                         help='The path of the test FASTA file.')
     parser.add_argument("--test_pssm", "-test_pssm", dest='test_pssm', type=str,
@@ -491,9 +535,16 @@ def checkargs(args):
         if args.type not in ['ACP', 'AMP']:
             print(f'ERROR: type "{args.type}" is not supported by TriNet!')
             raise ValueError
-    if args.use_PSSM is not None:
-        if args.train_pssm is None or args.test_pssm is None:
+    if args.use_PSSM:
+        if args.train_pssm is None:
             print('ERROR: please input the paths of train and test pssm files!')
+            raise ValueError
+    if args.use_test:
+        if args.test_fasta is None:
+            print('ERROR: please input the path of test fasta file!')
+            raise ValueError
+        if args.use_PSSM and args.test_pssm is None:
+            print('ERROR: please input the path of test pssm files!')
             raise ValueError
 
     return
@@ -502,7 +553,16 @@ def checkargs(args):
 class Config():
     def __init__(self, args):
 
+        # self.ligand = 'P' + args.ligand if args.ligand != 'HEME' else 'PHEM'
+        # self.Dataset_dir = f'./data/'
         self.type = args.type
+        self.use_PSSM = args.use_PSSM
+        self.use_TVI = args.use_TVI
+        self.use_test = args.use_test
+        self.train_fasta = args.train_fasta
+        self.train_pssm = args.train_pssm
+        self.test_fasta = args.test_fasta
+        self.test_pssm = args.test_pssm
         self.activation_type = args.activation_type
         self.batch_size = args.batch_size
         self.d1 = args.d1
@@ -517,12 +577,6 @@ class Config():
         self.head = args.head
         self.lr = args.lr
         self.ratio = args.ratio
-        self.use_PSSM = args.use_PSSM
-        self.use_TVI = args.use_TVI
-        self.train_fasta = args.train_fasta
-        self.train_pssm = args.train_pssm
-        self.test_fasta = args.test_fasta
-        self.test_pssm = args.test_pssm
         self.checkpoints = f'./checkpoints/{self.type}/'
         self.model_time = None
         # self.model_time = '2023-04-13-10:23:05'
