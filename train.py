@@ -1,4 +1,5 @@
 import argparse
+import distutils.util
 import pickle
 import sys
 import time
@@ -431,11 +432,15 @@ def train(params, seed=200, shuffle_seed=13, split_seed=7, val_ratio=0.2):
                   optimizer=tf.keras.optimizers.Adam(inverse_time_decay),
                   metrics=['accuracy'])
     model.load_weights('initialize_model_main_train.h5')
+    tensorboard_callback = tf.keras.callbacks.TensorBoard(log_dir=f'{params.model_path}/logs', write_graph=True, write_images=True)
     print("Train...")
     filepath_model_main = f'{params.model_path}/model.h5'
+    # history = model.fit(x=train_data, y=train_label,
+    #                     batch_size=batch_size, epochs=params.epoch, shuffle=True,
+    #                     callbacks=[Metrics(filepath_model_main, (val_data, val_label))], verbose=2)
     history = model.fit(x=train_data, y=train_label,
                         batch_size=batch_size, epochs=params.epoch, shuffle=True,
-                        callbacks=[Metrics(filepath_model_main, (val_data, val_label))], verbose=2)
+                        callbacks=[Metrics(filepath_model_main, (val_data, val_label)), tensorboard_callback], verbose=2)
     model.load_weights(filepath_model_main)
     print('model is finished')
 
@@ -473,15 +478,15 @@ def parse_args():
     parser = argparse.ArgumentParser(description="Launch a list of commands.")
     parser.add_argument("--type", "-type", dest="type", type=str,
                         help="The type of training model is antimicrobial peptide or anticancer peptide, 'ACP' or 'AMP'.")
-    parser.add_argument("--use_PSSM", "-use_PSSM", dest='use_PSSM', type=bool,
+    parser.add_argument("--use_PSSM", "-use_PSSM", dest='use_PSSM', type=lambda x:bool(distutils.util.strtobool(x)),
                         help='Whether to use the pssm feature.')
-    parser.add_argument("--use_TVI", "-use_TVI", dest='use_TVI', type=bool,
+    parser.add_argument("--use_TVI", "-use_TVI", dest='use_TVI', type=lambda x:bool(distutils.util.strtobool(x)),
                         help='Whether to use TVI process to select the more appropriate training and validation set.')
     parser.add_argument("--train_fasta", "-train_fasta", dest='train_fasta', type=str,
                         help='The path of the train FASTA file.')
     parser.add_argument("--train_pssm", "-train_pssm", dest='train_pssm', type=str,
                         help='The path of the train PSSM files.')
-    parser.add_argument("--use_test", "-use_test", dest='use_test', type=bool,
+    parser.add_argument("--use_test", "-use_test", dest='use_test', type=lambda x:bool(distutils.util.strtobool(x)),
                         help='Whether to use an independent test set to evaluate the trained model.')
     parser.add_argument("--test_fasta", "-test_fasta", dest='test_fasta', type=str,
                         help='The path of the test FASTA file.')
@@ -528,17 +533,19 @@ def parse_args():
 
 
 def checkargs(args):
-    if args.type is None:
-        print('ERROR: please input prediction type!')
+    if args.type is None or args.use_PSSM is None or args.use_test is None or args.use_TVI is None:
+        print('ERROR: please input the necessary parameters!')
         raise ValueError
-    else:
-        if args.type not in ['ACP', 'AMP']:
-            print(f'ERROR: type "{args.type}" is not supported by TriNet!')
-            raise ValueError
+
+    if args.type not in ['ACP', 'AMP']:
+        print(f'ERROR: type "{args.type}" is not supported by TriNet!')
+        raise ValueError
+
     if args.use_PSSM:
         if args.train_pssm is None:
             print('ERROR: please input the paths of train and test pssm files!')
             raise ValueError
+
     if args.use_test:
         if args.test_fasta is None:
             print('ERROR: please input the path of test fasta file!')
@@ -546,6 +553,11 @@ def checkargs(args):
         if args.use_PSSM and args.test_pssm is None:
             print('ERROR: please input the path of test pssm files!')
             raise ValueError
+    else:
+        print('No test independent dataset to evaluate the trained model!!!')
+
+    if not args.activation_type in ['relu', 'sigmoid', 'tanh']:
+        print('Please pass in the correct type of the activation function!!!')
 
     return
 
