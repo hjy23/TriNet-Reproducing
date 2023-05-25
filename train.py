@@ -432,7 +432,8 @@ def train(params, seed=200, shuffle_seed=13, split_seed=7, val_ratio=0.2):
                   optimizer=tf.keras.optimizers.Adam(inverse_time_decay),
                   metrics=['accuracy'])
     model.load_weights('initialize_model_main_train.h5')
-    tensorboard_callback = tf.keras.callbacks.TensorBoard(log_dir=f'{params.model_path}/logs', write_graph=True, write_images=True)
+    tensorboard_callback = tf.keras.callbacks.TensorBoard(log_dir=f'{params.model_path}/logs', write_graph=True,
+                                                          write_images=True)
     print("Train...")
     filepath_model_main = f'{params.model_path}/model.h5'
     # history = model.fit(x=train_data, y=train_label,
@@ -440,7 +441,8 @@ def train(params, seed=200, shuffle_seed=13, split_seed=7, val_ratio=0.2):
     #                     callbacks=[Metrics(filepath_model_main, (val_data, val_label))], verbose=2)
     history = model.fit(x=train_data, y=train_label,
                         batch_size=batch_size, epochs=params.epoch, shuffle=True,
-                        callbacks=[Metrics(filepath_model_main, (val_data, val_label)), tensorboard_callback], verbose=2)
+                        callbacks=[Metrics(filepath_model_main, (val_data, val_label)), tensorboard_callback],
+                        verbose=2)
     model.load_weights(filepath_model_main)
     print('model is finished')
 
@@ -449,7 +451,7 @@ def train(params, seed=200, shuffle_seed=13, split_seed=7, val_ratio=0.2):
         pred_probability = model.predict(test_data)
         # calculate metrics
         acc, precision, sensitivity, specificity, f1_score, MCC = calculate_performace(label_test, pred_probability,
-                                                                                   threshold=0.5)
+                                                                                       threshold=0.5)
     # with open(f'./test_label.pkl', 'wb') as f:
     #     pickle.dump(test_label, f)
     # with open(f'./test_pred.pkl', 'wb') as f:
@@ -478,15 +480,15 @@ def parse_args():
     parser = argparse.ArgumentParser(description="Launch a list of commands.")
     parser.add_argument("--type", "-type", dest="type", type=str,
                         help="The type of training model is antimicrobial peptide or anticancer peptide, 'ACP' or 'AMP'.")
-    parser.add_argument("--use_PSSM", "-use_PSSM", dest='use_PSSM', type=lambda x:bool(distutils.util.strtobool(x)),
+    parser.add_argument("--use_PSSM", "-use_PSSM", dest='use_PSSM', type=lambda x: bool(distutils.util.strtobool(x)),
                         help='Whether to use the pssm feature.')
-    parser.add_argument("--use_TVI", "-use_TVI", dest='use_TVI', type=lambda x:bool(distutils.util.strtobool(x)),
+    parser.add_argument("--use_TVI", "-use_TVI", dest='use_TVI', type=lambda x: bool(distutils.util.strtobool(x)),
                         help='Whether to use TVI process to select the more appropriate training and validation set.')
     parser.add_argument("--train_fasta", "-train_fasta", dest='train_fasta', type=str,
                         help='The path of the train FASTA file.')
     parser.add_argument("--train_pssm", "-train_pssm", dest='train_pssm', type=str,
                         help='The path of the train PSSM files.')
-    parser.add_argument("--use_test", "-use_test", dest='use_test', type=lambda x:bool(distutils.util.strtobool(x)),
+    parser.add_argument("--use_test", "-use_test", dest='use_test', type=lambda x: bool(distutils.util.strtobool(x)),
                         help='Whether to use an independent test set to evaluate the trained model.')
     parser.add_argument("--test_fasta", "-test_fasta", dest='test_fasta', type=str,
                         help='The path of the test FASTA file.')
@@ -525,8 +527,8 @@ def parse_args():
                         help='The number of steps of learning rate decay in each step of the dynamic learning rate adjustment.')
     parser.add_argument("--batch_size", "-batch_size", dest='batch_size', type=int, default=64,
                         help='Batch size for training deep model.')
-    parser.add_argument("--ratio", "-ratio", dest='ratio', type=int, default=8,
-                        help='The ratio adjusting the hidden layer size of the channel attention mechanism in the first stage.')
+    # parser.add_argument("--ratio", "-ratio", dest='ratio', type=int, default=8,
+    #                     help='The ratio adjusting the hidden layer size of the channel attention mechanism in the first stage.')
     parser.add_argument("--epoch", "-epoch", dest='epoch', type=int, default=50, help='Training epochs.')
 
     return parser.parse_args()
@@ -588,8 +590,8 @@ class Config():
         self.epoch = args.epoch
         self.head = args.head
         self.lr = args.lr
-        self.ratio = args.ratio
-        self.checkpoints = f'./checkpoints/{self.type}/'
+        # self.ratio = args.ratio
+        self.checkpoints = f'./checkpoints/'
         self.model_time = None
         # self.model_time = '2023-04-13-10:23:05'
         self.train = True
