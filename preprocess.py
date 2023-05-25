@@ -17,15 +17,17 @@ def load_fasta(dir):
         acps:   peptide sequences
         labels: peptide labels
     """
+    names = []
     sequences = []
     labels = []
     with open(dir) as file:
         for line in file:
             if line[0] == '>':
                 labels.append(int(line[-2]))
+                names.append(line.split()[0][1:])
             else:
                 sequences.append(line.rstrip())
-    return sequences, labels
+    return names, sequences, labels
 
 
 def coordinate(R=1):

@@ -599,7 +599,7 @@ class Config():
             # self.model_path = self.Dataset_dir + '/checkpoints/' + self.model_time
             self.model_path = self.checkpoints + self.model_time
         else:
-            localtime = time.strftime("%Y-%m-%d-%H:%M:%S", time.localtime())
+            localtime = time.strftime("%Y-%m-%d-%H_%M_%S", time.localtime())
             # self.model_path = self.Dataset_dir + '/checkpoints/' + localtime
             self.model_path = self.checkpoints + localtime
             os.makedirs(self.model_path)
