@@ -430,7 +430,9 @@ def train(params, seed=200, shuffle_seed=13, split_seed=7, val_ratio=0.2):
         decay_rate=params.decay_rate)
     model.compile(loss='binary_crossentropy',
                   optimizer=tf.keras.optimizers.Adam(inverse_time_decay),
-                  metrics=['accuracy'])
+                  metrics=['accuracy'],
+                  # run_eagerly=True
+                  )
     model.load_weights('initialize_model_main_train.h5')
     tensorboard_callback = tf.keras.callbacks.TensorBoard(log_dir=f'{params.model_path}/logs', write_graph=True,
                                                           write_images=True)
@@ -439,6 +441,7 @@ def train(params, seed=200, shuffle_seed=13, split_seed=7, val_ratio=0.2):
     # history = model.fit(x=train_data, y=train_label,
     #                     batch_size=batch_size, epochs=params.epoch, shuffle=True,
     #                     callbacks=[Metrics(filepath_model_main, (val_data, val_label))], verbose=2)
+    # history = model.train_on_batch(x=train_data, y=train_label)
     history = model.fit(x=train_data, y=train_label,
                         batch_size=batch_size, epochs=params.epoch, shuffle=True,
                         callbacks=[Metrics(filepath_model_main, (val_data, val_label)), tensorboard_callback],
@@ -448,15 +451,22 @@ def train(params, seed=200, shuffle_seed=13, split_seed=7, val_ratio=0.2):
 
     # predict
     if params.use_test:
+        print('Test result:')
         pred_probability = model.predict(test_data)
+        pred_label = np.squeeze(1 * (pred_probability >= 0.5))
         # calculate metrics
         acc, precision, sensitivity, specificity, f1_score, MCC = calculate_performace(label_test, pred_probability,
                                                                                        threshold=0.5)
-    # with open(f'./test_label.pkl', 'wb') as f:
-    #     pickle.dump(test_label, f)
-    # with open(f'./test_pred.pkl', 'wb') as f:
-    #     pickle.dump(pred_probability, f)
-    # draw_ROC(test_label, pred_probability)
+        testOutpath = f'./{params.model_path}/test/'
+        if not os.path.exists(testOutpath):
+            os.makedirs(testOutpath)
+        with open(f'{testOutpath}/test_label.pkl', 'wb') as f:
+            pickle.dump(label_test, f)
+        with open(f'{testOutpath}/test_pred.pkl', 'wb') as f:
+            pickle.dump(pred_probability, f)
+        with open(f'{testOutpath}/pred_label.pkl', 'wb') as f:
+            pickle.dump(pred_label, f)
+        draw_ROC(label_test, pred_probability, f'{testOutpath}/ROC.png')
 
     # performance = [acc, sensitivity, specificity, precision, f1_score, MCC]
 
