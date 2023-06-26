@@ -2,6 +2,7 @@ import numpy as np
 import random
 import os
 from matplotlib import pyplot as plt
+import prettytable as pt
 from sklearn.metrics import roc_curve, auc, f1_score
 
 
@@ -70,13 +71,19 @@ def calculate_performace(true_label, pred_label, threshold):
     specificity = float(tn) / (tn + fp)
     f1_score = 2 * precision * sensitivity / (precision + sensitivity)
     MCC = float(tp * tn - fp * fn) / (np.sqrt((tp + fp) * (tp + fn) * (tn + fp) * (tn + fn)))
-    print(f'acc: {acc}\nprecision: {precision}\nsensitivity: {sensitivity}\n'
-          f'specificity: {specificity}\nf1_score: {f1_score}\nMCC: {MCC}')
-    # print(acc, precision, sensitivity, specificity, f1_score, MCC)
+
+    test_matrices = [acc, precision, sensitivity, specificity, f1_score, MCC]
+    tb = pt.PrettyTable()
+    tb.field_names = ['Dataset', 'th', 'ACC', 'Pre', 'Sen', 'Spe', 'F1', 'MCC']
+    row_list = ['test', '0.5']
+    for i in range(len(tb.field_names) - 2):
+        row_list.append('{:.3f}'.format(test_matrices[i]))
+    tb.add_row(row_list)
+    print(tb)
     return acc, precision, sensitivity, specificity, f1_score, MCC
 
 
-def draw_ROC(labels, probality):
+def draw_ROC(labels, probality, save_path):
     def plot_roc_curve(labels, probality, auc_tag=True):
         # fpr2, tpr2, thresholds = roc_curve(labels, pred_y)
         labels = np.squeeze(labels)
@@ -97,7 +104,8 @@ def draw_ROC(labels, probality):
     plt.ylabel('True Positive Rate')
     plt.title('ROC')
     plt.legend(loc="lower right")
-    plt.show()
+    # plt.show()
+    plt.savefig(save_path)
 
 
 def threshold_adaptive_acc(val_targ, val_pred, threshold=np.arange(0.3, 0.7, 0.02)):
