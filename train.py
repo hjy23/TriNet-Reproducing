@@ -383,6 +383,8 @@ def TVI_process(params, model, train_data, train_label, val_data, val_label, bat
 
 
 def train(params, seed=200, shuffle_seed=13, split_seed=7, val_ratio=0.2):
+    with open(f'{params.model_path}/params.pkl', 'wb') as f:
+        pickle.dump(params, f)
     batch_size = params.batch_size
     global sample_weights, train_data, val_data, train_label, val_label
     set_seed(seed=seed)
@@ -523,8 +525,8 @@ def parse_args():
                         help='The dimension of hidden units in the middle linear layer of a point-wise feed-forward network in the Encoder of the third stage.')
     parser.add_argument("--head", "-head", dest='head', type=int, default=2,
                         help='The number of heads in the multi-head self-attention mechanism in the Encoder of the third stage.')
-    parser.add_argument("--activation_type", "-activation_type", dest='activation_type', type=str, default='relu',
-                        help='The type of activation function that applies to the output of the concatenation of the results of the three stages.')
+    # parser.add_argument("--activation_type", "-activation_type", dest='activation_type', type=str, default='relu',
+    #                     help='The type of activation function that applies to the output of the concatenation of the results of the three stages.')
     parser.add_argument("--d1", "-d1", dest='d1', type=float, default=0.5667255416898414,
                         help='The probability of randomly dropping input units during each update in the training period of the first stage.')
     parser.add_argument("--d2", "-d2", dest='d2', type=float, default=0.5386135610624118,
@@ -568,8 +570,8 @@ def checkargs(args):
     else:
         print('No test independent dataset to evaluate the trained model!!!')
 
-    if not args.activation_type in ['relu', 'sigmoid', 'tanh']:
-        print('Please pass in the correct type of the activation function!!!')
+    # if not args.activation_type in ['relu', 'sigmoid', 'tanh']:
+    #     print('Please pass in the correct type of the activation function!!!')
 
     return
 
@@ -587,7 +589,7 @@ class Config():
         self.train_pssm = args.train_pssm
         self.test_fasta = args.test_fasta
         self.test_pssm = args.test_pssm
-        self.activation_type = args.activation_type
+        # self.activation_type = args.activation_type
         self.batch_size = args.batch_size
         self.d1 = args.d1
         self.d2 = args.d2
@@ -617,6 +619,7 @@ class Config():
     def print_config(self):
         for name, value in vars(self).items():
             print('{} = {}'.format(name, value))
+
 
 
 class Logger(object):

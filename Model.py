@@ -21,7 +21,7 @@ def Model(params):
     # l=spatial_attention(l_ca)
     l = BatchNormalization()(l)
     l = Flatten()(l)
-    l = Dense(params.dense_unit_dcgr, activation=params.activation_type)(l)
+    l = Dense(params.dense_unit_dcgr, activation='relu')(l)
     output_left = Dropout(rate=params.d1)(l)
 
     # stage2：pssm输入进入双向lstm，输出256维特征向量
@@ -32,14 +32,14 @@ def Model(params):
     # stage3：理化性质输入，作为词向量输入自注意力机制，进行平均池化，输出50维向量
     input_right = tf.keras.Input(shape=(50, 8))  ##chemiphysical
     r = Encoder2(dff=params.dff, num_heads=params.head, num_layers=6)(input_right)
-    print(r.shape)
+    # print(r.shape)
     r = tf.transpose(r, (0, 2, 1))
     r = tf.nn.avg_pool(r, ksize=[8], strides=[1], padding='VALID')
     output_right = BatchNormalization()(r)
     output_right = Flatten()(output_right)
 
     concatenated = keras.layers.concatenate([output_left, output_middle, output_right])
-    x = Dense(params.dense_unit_all, activation=params.activation_type)(concatenated)
+    x = Dense(params.dense_unit_all, activation='relu')(concatenated)
     x = Dropout(rate=params.d2)(x)
     final_output = Dense(1, activation='sigmoid')(x)
     final_model = keras.models.Model(inputs=[input_left, input_middle, input_right], outputs=final_output)
