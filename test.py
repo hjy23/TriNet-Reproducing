@@ -419,10 +419,10 @@ if __name__ == '__main__':
     curdir = os.getcwd()
     parser = argparse.ArgumentParser()
     parser.add_argument('--PSSM_file', '-p', default='./pssm_acp_example/', help='path of PSSM/PSSM_file', type=str)
-    parser.add_argument('--sequence_file', '-s', default='./ACP_example.fasta', help='path of sequence file', type=str)
+    parser.add_argument('--sequence_file', '-s', default='./data/selfAssembleData/Test_1.fasta', help='path of sequence file', type=str)
     parser.add_argument('--output', '-o', default='./outputacp.csv',
                         help='path of Trinet result,defaut with path of current path/output ', type=str)
-    parser.add_argument('--operation_mode', '-mode', default='sc',
+    parser.add_argument('--operation_mode', '-mode', default='fc',
                         help='f for fast mode and s for standard mode, c for anticancer prediction and m for antimicrobial prediction',
                         type=str)
     parser.add_argument('--model_path', '-mp',
@@ -454,10 +454,6 @@ if __name__ == '__main__':
                 acp_test(model_path=args.model_path, dir=input_file, pssm_dir=pssm_path, output_dir=output)
             if operation_mode == 'sm':
                 amp_test(model_path=args.model_path, dir=input_file, pssm_dir=pssm_path, output_dir=output)
-            if operation_mode == 'fc':
-                acp_test_fast(model_path=args.model_path, dir=input_file, output_dir=output)
-            if operation_mode == 'fm':
-                amp_test_fast(model_path=args.model_path, dir=input_file, output_dir=output)
             print('finished')
     else:
         if input_file == None or operation_mode == None:
@@ -465,7 +461,7 @@ if __name__ == '__main__':
         else:
 
             if operation_mode == 'fc':
-                acp_test_fast(dir=input_file, output_dir=output)
+                acp_test_fast(model_path=args.model_path, dir=input_file, output_dir=output)
             if operation_mode == 'fm':
-                amp_test_fast(dir=input_file, output_dir=output)
+                amp_test_fast(model_path=args.model_path, dir=input_file, output_dir=output)
             print('finished')
